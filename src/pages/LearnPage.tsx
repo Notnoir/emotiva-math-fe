@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { emotionApi, learningApi, adaptiveApi } from "../services/api";
 import ThreeDViewer from "../components/ThreeDViewer";
 import axios from "axios";
@@ -15,6 +15,12 @@ export default function LearnPage() {
   const [visualizationData, setVisualizationData] = useState<any>(null);
   const [loadingViz, setLoadingViz] = useState(false);
 
+  // Text-to-Speech states
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const speechSynthesis = useRef<SpeechSynthesis | null>(null);
+  const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
+
   useEffect(() => {
     // Load user profile from localStorage
     const profile = localStorage.getItem("user_profile");
@@ -25,6 +31,19 @@ export default function LearnPage() {
       // Load recommendations
       loadRecommendations(parsedProfile.id);
     }
+
+    // Initialize Speech Synthesis
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      speechSynthesis.current = window.speechSynthesis;
+      console.log("✅ Speech Synthesis initialized:", !!window.speechSynthesis);
+    } else {
+      console.error("❌ Speech Synthesis not available in this browser");
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopAudio();
+    };
   }, []);
 
   const topics = [
@@ -124,12 +143,504 @@ export default function LearnPage() {
         tipe_aktivitas: "belajar",
         durasi: 0,
       });
+
+      // Auto-play audio for auditory learners
+      if (
+        userProfile.gaya_belajar === "auditori" &&
+        response.data?.content?.explanation
+      ) {
+        // Small delay to ensure content is rendered
+        setTimeout(() => {
+          playAudio(response.data.content.explanation);
+        }, 500);
+      }
     } catch (error) {
       console.error("Error loading adaptive content:", error);
       alert("❌ Gagal memuat konten. Pastikan backend berjalan!");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Text-to-Speech Functions - with chunking for Google voices
+  const playAudio = (text: string) => {
+    console.log("🔊 playAudio called with text length:", text?.length);
+
+    // If text is very long, split into sentences for better Google voice handling
+    const MAX_CHUNK_LENGTH = 300;
+    if (text.length > MAX_CHUNK_LENGTH) {
+      console.log("📝 Text too long, using sentence-by-sentence playback...");
+      playAudioChunked(text);
+      return;
+    }
+
+    if (!text || text.trim() === "") {
+      console.error("❌ No text provided to playAudio");
+      return;
+    }
+
+    // Check browser support
+    if (!window.speechSynthesis) {
+      console.error("❌ Speech Synthesis not supported in this browser");
+      alert("Browser Anda tidak mendukung Text-to-Speech");
+      return;
+    }
+
+    // Only cancel if actually speaking (not just pending)
+    if (window.speechSynthesis.speaking) {
+      console.log("🛑 Canceling active speech...");
+      window.speechSynthesis.cancel();
+
+      // Clean up old utterance
+      if (currentUtterance.current) {
+        currentUtterance.current.onstart = null;
+        currentUtterance.current.onend = null;
+        currentUtterance.current.onerror = null;
+        currentUtterance.current = null;
+      }
+
+      // Small delay after cancel
+      setTimeout(() => {
+        console.log("⏭️ Retry playAudio after cancel...");
+        playAudio(text);
+      }, 150);
+      return;
+    }
+
+    // Get available voices
+    let voices = window.speechSynthesis.getVoices();
+
+    // If voices not loaded yet, wait for them
+    if (voices.length === 0) {
+      console.log("⏳ Voices not loaded yet, waiting...");
+      window.speechSynthesis.addEventListener(
+        "voiceschanged",
+        () => {
+          console.log("🔄 Voices loaded, retrying...");
+          playAudio(text);
+        },
+        { once: true }
+      );
+      return;
+    }
+
+    console.log("🎤 Available voices:", voices.length);
+    console.log(
+      "🎤 All voices:",
+      voices.map((v) => `${v.name} (${v.lang})`)
+    );
+
+    // Try to find Indonesian voice (prefer LOCAL Microsoft, but accept Google if no local)
+    const microsoftIndonesian = voices.find(
+      (v) => v.name.includes("Microsoft") && v.lang.startsWith("id")
+    );
+    const googleIndonesian = voices.find(
+      (v) => v.name.includes("Google") && v.lang === "id-ID"
+    );
+    const anyIndonesian = voices.find(
+      (v) => v.lang.startsWith("id") || v.lang.startsWith("ID")
+    );
+
+    // Priority: Microsoft local > Google online > English fallback
+    let selectedVoice =
+      microsoftIndonesian || googleIndonesian || anyIndonesian;
+
+    if (!selectedVoice) {
+      console.log(
+        "⚠️ No Indonesian voice found, using English Microsoft as fallback"
+      );
+      selectedVoice = voices.find(
+        (v) => v.name.includes("Microsoft") && v.lang === "en-US"
+      );
+    }
+
+    console.log(
+      "🇮� Selected voice:",
+      selectedVoice?.name || "default",
+      "localService:",
+      selectedVoice?.localService
+    );
+
+    console.log("✅ Creating new utterance...");
+
+    // Create new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Set voice and language
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+      console.log(
+        "✅ Using voice:",
+        selectedVoice.name,
+        "lang:",
+        selectedVoice.lang,
+        "local:",
+        selectedVoice.localService
+      );
+    } else {
+      // Last resort fallback
+      utterance.lang = "en-US";
+      console.log("⚠️ No voice found, using default en-US");
+    }
+
+    utterance.rate = 0.9; // Slightly slower for better comprehension
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    console.log("🎙️ Utterance config:", {
+      voice: utterance.voice?.name || "default",
+      lang: utterance.lang,
+      rate: utterance.rate,
+      textLength: text.length,
+    });
+
+    // Event handlers
+    utterance.onstart = () => {
+      console.log("▶️ Audio started playing");
+      setIsPlaying(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      console.log("⏹️ Audio finished playing");
+      setIsPlaying(false);
+      setIsPaused(false);
+      currentUtterance.current = null;
+    };
+
+    utterance.onerror = (event) => {
+      console.error("❌ Speech synthesis error:", event);
+      // Only show alert for non-interrupted errors
+      if (event.error !== "interrupted") {
+        alert("Error: " + event.error);
+      }
+      setIsPlaying(false);
+      setIsPaused(false);
+      currentUtterance.current = null;
+    };
+
+    currentUtterance.current = utterance;
+
+    console.log("🚀 Starting speech synthesis...");
+
+    // Force resume in case speechSynthesis is stuck in paused state
+    if (window.speechSynthesis.paused) {
+      console.log("⚠️ SpeechSynthesis was paused, resuming...");
+      window.speechSynthesis.resume();
+    }
+
+    // Timeout fallback - if Google voice doesn't start in 3 seconds, use English
+    let hasStarted = false;
+    const fallbackTimeout = setTimeout(() => {
+      if (!hasStarted && currentUtterance.current) {
+        console.log(
+          "❌ Timeout waiting for Google voice, switching to English fallback..."
+        );
+        window.speechSynthesis.cancel();
+        currentUtterance.current = null;
+
+        // Retry with English voice
+        const englishVoices = window.speechSynthesis.getVoices();
+        const englishVoice = englishVoices.find(
+          (v) => v.name.includes("Microsoft") && v.lang === "en-US"
+        );
+
+        const fallbackUtterance = new SpeechSynthesisUtterance(text);
+        if (englishVoice) {
+          fallbackUtterance.voice = englishVoice;
+          fallbackUtterance.lang = englishVoice.lang;
+        } else {
+          fallbackUtterance.lang = "en-US";
+        }
+        fallbackUtterance.rate = 0.9;
+        fallbackUtterance.pitch = 1.0;
+        fallbackUtterance.volume = 1.0;
+
+        fallbackUtterance.onstart = () => {
+          console.log("▶️ Fallback audio started");
+          setIsPlaying(true);
+          setIsPaused(false);
+        };
+
+        fallbackUtterance.onend = () => {
+          console.log("⏹️ Fallback audio finished");
+          setIsPlaying(false);
+          setIsPaused(false);
+          currentUtterance.current = null;
+        };
+
+        fallbackUtterance.onerror = (event) => {
+          console.error("❌ Fallback error:", event);
+          setIsPlaying(false);
+          setIsPaused(false);
+          currentUtterance.current = null;
+        };
+
+        currentUtterance.current = fallbackUtterance;
+        console.log("🔄 Speaking with English fallback...");
+        window.speechSynthesis.speak(fallbackUtterance);
+      }
+    }, 3000);
+
+    // Modify onstart to clear timeout and flag
+    const originalOnStart = utterance.onstart;
+    utterance.onstart = function (event) {
+      hasStarted = true;
+      clearTimeout(fallbackTimeout);
+      if (originalOnStart) originalOnStart.call(this, event);
+    };
+
+    window.speechSynthesis.speak(utterance);
+
+    // For online voices (like Google), need multiple resume attempts to handle network delay
+    const maxAttempts = 5;
+    let attempt = 0;
+
+    const forceResumeInterval = setInterval(() => {
+      attempt++;
+
+      if (attempt > maxAttempts || !currentUtterance.current || hasStarted) {
+        clearInterval(forceResumeInterval);
+        return;
+      }
+
+      if (window.speechSynthesis.paused) {
+        console.log(`⚠️ Force resume attempt ${attempt}...`);
+        window.speechSynthesis.resume();
+      }
+
+      // If still pending/speaking but not started yet, try resume
+      if (window.speechSynthesis.pending && !isPlaying) {
+        console.log(`⚠️ Still pending, force resume ${attempt}...`);
+        window.speechSynthesis.resume();
+      }
+    }, 200);
+
+    console.log("✅ speak() called, waiting for onstart...");
+  };
+
+  // Play audio in chunks (sentence by sentence)
+  const playAudioChunked = (text: string) => {
+    console.log("🎬 Starting chunked playback...");
+
+    // Only cancel if actually speaking (not first time)
+    if (window.speechSynthesis.speaking) {
+      console.log("🛑 Canceling active speech...");
+      window.speechSynthesis.cancel();
+
+      // Clean up old utterance
+      if (currentUtterance.current) {
+        currentUtterance.current.onstart = null;
+        currentUtterance.current.onend = null;
+        currentUtterance.current.onerror = null;
+        currentUtterance.current = null;
+      }
+
+      // Small delay after cancel
+      setTimeout(() => {
+        console.log("⏭️ Retry playAudioChunked after cancel...");
+        playAudioChunked(text);
+      }, 150);
+      return;
+    }
+
+    // Get Indonesian voice
+    let voices = window.speechSynthesis.getVoices();
+    const googleIndonesian = voices.find(
+      (v) => v.name.includes("Google") && v.lang === "id-ID"
+    );
+
+    if (!googleIndonesian) {
+      console.error("❌ No Indonesian voice available");
+      alert("Voice bahasa Indonesia tidak tersedia. Silakan coba lagi.");
+      return;
+    }
+
+    console.log("✅ Using voice:", googleIndonesian.name);
+
+    // Split by sentences (. ! ?)
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    console.log(`📚 Split into ${sentences.length} sentences`);
+
+    let currentIndex = 0;
+    setIsPlaying(true);
+    setIsPaused(false);
+
+    const speakNextSentence = () => {
+      if (currentIndex >= sentences.length) {
+        console.log("✅ All sentences completed");
+        setIsPlaying(false);
+        setIsPaused(false);
+        currentUtterance.current = null;
+        return;
+      }
+
+      const sentence = sentences[currentIndex].trim();
+      if (!sentence) {
+        currentIndex++;
+        speakNextSentence();
+        return;
+      }
+
+      console.log(
+        `🗣️ Speaking sentence ${currentIndex + 1}/${
+          sentences.length
+        }: "${sentence.substring(0, 50)}..."`
+      );
+
+      const utterance = new SpeechSynthesisUtterance(sentence);
+      utterance.voice = googleIndonesian;
+      utterance.lang = "id-ID";
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      utterance.onstart = () => {
+        console.log(`▶️ Sentence ${currentIndex + 1} started`);
+      };
+
+      utterance.onend = () => {
+        console.log(`✅ Sentence ${currentIndex + 1} ended`);
+        currentIndex++;
+        // Small delay between sentences
+        setTimeout(speakNextSentence, 100);
+      };
+
+      utterance.onerror = (event) => {
+        console.error(`❌ Error on sentence ${currentIndex + 1}:`, event);
+        if (event.error !== "interrupted") {
+          // Skip to next sentence on error
+          currentIndex++;
+          setTimeout(speakNextSentence, 100);
+        }
+      };
+
+      currentUtterance.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakNextSentence();
+  };
+
+  const pauseAudio = () => {
+    console.log("⏸️ pauseAudio called, isPlaying:", isPlaying);
+    if (window.speechSynthesis && isPlaying) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+      console.log("✅ Audio paused");
+    }
+  };
+
+  const resumeAudio = () => {
+    console.log("▶️ resumeAudio called, isPaused:", isPaused);
+    if (window.speechSynthesis && isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      console.log("✅ Audio resumed");
+    }
+  };
+
+  const stopAudio = () => {
+    console.log("⏹️ stopAudio called");
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      setIsPaused(false);
+      currentUtterance.current = null;
+      console.log("✅ Audio stopped and state cleared");
+    }
+  };
+
+  const handlePlayPause = () => {
+    const explanation = adaptiveContent?.content?.explanation;
+    console.log(
+      "🎯 handlePlayPause clicked, explanation exists:",
+      !!explanation
+    );
+
+    if (!explanation) {
+      console.error(
+        "❌ No explanation found in adaptiveContent.content.explanation"
+      );
+      return;
+    }
+
+    console.log("Current state - isPlaying:", isPlaying, "isPaused:", isPaused);
+
+    if (!isPlaying) {
+      console.log("➡️ Starting playback...");
+      playAudio(explanation);
+    } else if (isPaused) {
+      console.log("➡️ Resuming playback...");
+      resumeAudio();
+    } else {
+      console.log("➡️ Pausing playback...");
+      pauseAudio();
+    }
+  };
+
+  // Test function - simple English speech
+  const testSpeech = () => {
+    console.log("🧪 Testing speech with simple English text...");
+
+    // Hard reset speechSynthesis
+    console.log("🔄 Resetting speechSynthesis...");
+    window.speechSynthesis.cancel();
+
+    setTimeout(() => {
+      // Use LOCAL Microsoft voice only
+      const voices = window.speechSynthesis.getVoices();
+      const microsoftVoice = voices.find(
+        (v) => v.name.includes("Microsoft") && v.lang === "en-US"
+      );
+
+      console.log("🎤 Using voice:", microsoftVoice?.name || "default");
+
+      const utterance = new SpeechSynthesisUtterance("Hello, this is a test.");
+
+      // Use Microsoft voice if available
+      if (microsoftVoice) {
+        utterance.voice = microsoftVoice;
+        utterance.lang = microsoftVoice.lang;
+      } else {
+        utterance.lang = "en-US";
+      }
+
+      utterance.volume = 1.0;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      utterance.onstart = () => {
+        console.log("✅ TEST: Speech started!");
+      };
+
+      utterance.onend = () => {
+        console.log("✅ TEST: Speech ended!");
+      };
+
+      utterance.onerror = (e) => {
+        console.error("❌ TEST: Error:", e);
+      };
+
+      console.log("✅ TEST: Calling speak()...");
+      window.speechSynthesis.speak(utterance);
+
+      // Check status immediately after
+      setTimeout(() => {
+        console.log("📊 Status after speak:", {
+          speaking: window.speechSynthesis.speaking,
+          pending: window.speechSynthesis.pending,
+          paused: window.speechSynthesis.paused,
+        });
+
+        // Try resume if paused
+        if (window.speechSynthesis.paused) {
+          console.log("⚠️ Was paused, resuming...");
+          window.speechSynthesis.resume();
+        }
+      }, 50);
+    }, 200);
   };
 
   const handleTopicSelect = async (topicId: string) => {
@@ -360,9 +871,89 @@ export default function LearnPage() {
 
             {/* Main Explanation */}
             <div className="card">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                📖 Penjelasan
-              </h3>
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-2xl font-bold text-gray-800">
+                  📖 Penjelasan
+                </h3>
+
+                {/* Audio Player Controls */}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePlayPause}
+                      disabled={!adaptiveContent?.content?.explanation}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all shadow-md flex items-center gap-2 ${
+                        isPlaying && !isPaused
+                          ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                          : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {isPlaying && !isPaused ? (
+                        <>⏸️ Pause</>
+                      ) : isPaused ? (
+                        <>▶️ Resume</>
+                      ) : (
+                        <>🔊 Listen Explanation</>
+                      )}
+                    </button>
+
+                    {/* Test Button */}
+                    <button
+                      onClick={testSpeech}
+                      className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-all shadow-md text-sm"
+                    >
+                      🧪 Test
+                    </button>
+
+                    {isPlaying && (
+                      <button
+                        onClick={stopAudio}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all shadow-md"
+                      >
+                        ⏹️ Stop
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-gray-500 text-right max-w-xs">
+                    {userProfile?.gaya_belajar === "auditori" && (
+                      <div className="text-indigo-600 font-medium mb-1">
+                        👂 Auto-play aktif (Auditory Learner)
+                      </div>
+                    )}
+                    <div className="italic">
+                      Audio generated from AI-adapted text based on teacher
+                      material
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Audio Status Indicator */}
+              {isPlaying && (
+                <div className="mb-4 p-3 bg-indigo-50 border-l-4 border-indigo-500 rounded">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div
+                        className="w-1 h-4 bg-indigo-600 animate-pulse"
+                        style={{ animationDelay: "0s" }}
+                      ></div>
+                      <div
+                        className="w-1 h-4 bg-indigo-600 animate-pulse"
+                        style={{ animationDelay: "0.15s" }}
+                      ></div>
+                      <div
+                        className="w-1 h-4 bg-indigo-600 animate-pulse"
+                        style={{ animationDelay: "0.3s" }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-indigo-700">
+                      {isPaused ? "Audio Paused" : "Playing Audio..."}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="prose max-w-none">
                 <pre className="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed">
                   {adaptiveContent.content.explanation}

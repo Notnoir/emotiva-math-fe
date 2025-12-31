@@ -3,6 +3,8 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import LearnPage from "./pages/LearnPage";
 import TeacherPage from "./pages/TeacherPage";
+import QuizPage from "./pages/QuizPage";
+import DashboardPage from "./pages/DashboardPage";
 import "./index.css";
 
 function App() {
@@ -33,6 +35,12 @@ function App() {
                   Home
                 </Link>
                 <Link
+                  to="/dashboard"
+                  className="text-gray-600 hover:text-purple-600 font-medium transition-colors"
+                >
+                  📊 Dashboard
+                </Link>
+                <Link
                   to="/teacher"
                   className="text-gray-600 hover:text-indigo-600 font-medium transition-colors"
                 >
@@ -50,6 +58,12 @@ function App() {
                 >
                   Belajar
                 </Link>
+                <Link
+                  to="/quiz"
+                  className="text-gray-600 hover:text-indigo-600 font-medium transition-colors"
+                >
+                  🎯 Quiz
+                </Link>
               </div>
             </div>
           </div>
@@ -58,9 +72,11 @@ function App() {
         {/* Routes */}
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/teacher" element={<TeacherPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/learn" element={<LearnPage />} />
+          <Route path="/quiz" element={<QuizPage />} />
         </Routes>
 
         {/* Footer */}
