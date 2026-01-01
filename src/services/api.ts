@@ -3,6 +3,7 @@
  * Base URL: http://localhost:5000/api
  */
 import axios from "axios";
+import { authService } from "./authService";
 import type {
   UserProfile,
   EmotionLog,
@@ -18,6 +19,20 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// Add auth token to all requests from this api instance
+api.interceptors.request.use(
+  (config) => {
+    const token = authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // ==================== PROFILE API ====================
 
@@ -92,11 +107,8 @@ export const adaptiveApi = {
     return response.data;
   },
 
-  // Get recommendations
-  getRecommendations: async (userId: number) => {
-    const response = await api.get(`/adaptive/recommend?user_id=${userId}`);
-    return response.data;
-  },
+  // Note: Backend doesn't have /adaptive/recommend endpoint
+  // Topics should be fetched from materials instead
 };
 
 // ==================== HEALTH CHECK ====================

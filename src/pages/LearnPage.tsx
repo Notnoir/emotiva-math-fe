@@ -11,7 +11,6 @@ export default function LearnPage() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [adaptiveContent, setAdaptiveContent] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<any>(null);
   const [visualizationData, setVisualizationData] = useState<any>(null);
   const [loadingViz, setLoadingViz] = useState(false);
 
@@ -28,8 +27,8 @@ export default function LearnPage() {
       const parsedProfile = JSON.parse(profile);
       setUserProfile(parsedProfile);
 
-      // Load recommendations
-      loadRecommendations(parsedProfile.id);
+      // Note: Backend doesn't have /adaptive/recommend endpoint
+      // Topics are statically defined above
     }
 
     // Initialize Speech Synthesis
@@ -87,15 +86,6 @@ export default function LearnPage() {
     { value: "bingung", label: "😕 Bingung", color: "yellow" },
     { value: "cemas", label: "😰 Cemas", color: "red" },
   ];
-
-  const loadRecommendations = async (userId: number) => {
-    try {
-      const response = await adaptiveApi.getRecommendations(userId);
-      setRecommendations(response.data);
-    } catch (error) {
-      console.error("Error loading recommendations:", error);
-    }
-  };
 
   const handleEmotionChange = async (emotion: typeof currentEmotion) => {
     setCurrentEmotion(emotion);
@@ -817,13 +807,6 @@ export default function LearnPage() {
                       >
                         {topic.difficulty}
                       </span>
-                      {recommendations?.recommended_topics?.includes(
-                        topic.id
-                      ) && (
-                        <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          ⭐ Recommended
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>

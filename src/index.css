@@ -1,3 +1,6 @@
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,8 +27,8 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -63,4 +66,28 @@ html {
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+}
+
+/* Custom Gradient Background */
+.bg-custom-gradient {
+  background: linear-gradient(135deg, #f5f3ff 0%, #fff0f5 100%);
+}
+
+/* Navigation Link */
+.nav-link {
+  @apply flex items-center gap-2 text-slate-600 hover:text-[#6C5CE7] transition-colors font-medium px-3 py-2 rounded-lg hover:bg-purple-50;
+}
+
+.nav-link.active {
+  @apply text-[#6C5CE7] bg-purple-50;
+}
+
+/* Dashboard Card */
+.dashboard-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-white hover:shadow-md transition-all duration-300;
+}
+
+/* Action Button */
+.action-btn {
+  @apply w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium text-white transition-all transform hover:-translate-y-0.5 hover:shadow-lg;
 }
