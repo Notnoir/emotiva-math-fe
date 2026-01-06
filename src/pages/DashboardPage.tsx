@@ -64,8 +64,11 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      console.log("📊 Loading dashboard data...");
+      
       // Load overview
       const overviewRes = await axios.get(`${API_URL}/dashboard/overview`);
+      console.log("Overview response:", overviewRes.data);
       if (overviewRes.data.status === "success") {
         setOverview(overviewRes.data.data.overview);
         setRecentActivity(overviewRes.data.data.recent_activity);
@@ -75,12 +78,14 @@ export default function DashboardPage() {
       const studentsRes = await axios.get(
         `${API_URL}/dashboard/students?limit=10&sort=score`
       );
+      console.log("Students response:", studentsRes.data);
       if (studentsRes.data.status === "success") {
         setStudents(studentsRes.data.data.students);
       }
 
       // Load topics
       const topicsRes = await axios.get(`${API_URL}/dashboard/topics`);
+      console.log("Topics response:", topicsRes.data);
       if (topicsRes.data.status === "success") {
         setTopics(topicsRes.data.data.topics);
       }
@@ -89,11 +94,14 @@ export default function DashboardPage() {
       const emotionsRes = await axios.get(
         `${API_URL}/dashboard/emotions?days=30`
       );
+      console.log("Emotions response:", emotionsRes.data);
       if (emotionsRes.data.status === "success") {
         setEmotions(emotionsRes.data.data.distribution);
       }
+      
+      console.log("✅ Dashboard data loaded successfully");
     } catch (error) {
-      console.error("Failed to load dashboard data:", error);
+      console.error("❌ Failed to load dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -208,66 +216,66 @@ export default function DashboardPage() {
 
         {/* Recent Activity */}
         {recentActivity && (
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 mb-8 text-white">
-            <h2 className="text-2xl font-bold mb-4">
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-md p-6 mb-8 text-white">
+            <h2 className="text-xl font-bold mb-4">
               ⚡ Aktivitas 7 Hari Terakhir
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-3xl font-bold">
+              <div className="bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">
                   {recentActivity.last_7_days_activities}
                 </div>
-                <div className="text-indigo-100">Sesi Belajar</div>
+                <div className="text-sm opacity-90">Sesi Belajar</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold">
+              <div className="bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">
                   {recentActivity.last_7_days_quizzes}
                 </div>
-                <div className="text-indigo-100">Quiz Dikerjakan</div>
+                <div className="text-sm opacity-90">Quiz Dikerjakan</div>
               </div>
             </div>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-md mb-6">
-          <div className="flex border-b">
+        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+          <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all ${
                 activeTab === "overview"
-                  ? "text-purple-600 border-b-2 border-purple-600"
-                  : "text-gray-600 hover:text-purple-600"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-purple-600 hover:bg-purple-50/50"
               }`}
             >
               📊 Overview
             </button>
             <button
               onClick={() => setActiveTab("students")}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all ${
                 activeTab === "students"
-                  ? "text-purple-600 border-b-2 border-purple-600"
-                  : "text-gray-600 hover:text-purple-600"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-purple-600 hover:bg-purple-50/50"
               }`}
             >
               👥 Siswa
             </button>
             <button
               onClick={() => setActiveTab("topics")}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all ${
                 activeTab === "topics"
-                  ? "text-purple-600 border-b-2 border-purple-600"
-                  : "text-gray-600 hover:text-purple-600"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-purple-600 hover:bg-purple-50/50"
               }`}
             >
               📚 Topik
             </button>
             <button
               onClick={() => setActiveTab("emotions")}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all ${
                 activeTab === "emotions"
-                  ? "text-purple-600 border-b-2 border-purple-600"
-                  : "text-gray-600 hover:text-purple-600"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-purple-600 hover:bg-purple-50/50"
               }`}
             >
               😊 Emosi
@@ -277,20 +285,20 @@ export default function DashboardPage() {
 
         {/* Tab Content */}
         {activeTab === "overview" && (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Students */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">
-                🏆 Top 5 Siswa
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span>🏆</span> Top 5 Siswa
               </h3>
               <div className="space-y-3">
-                {students.slice(0, 5).map((student, idx) => (
+                {students.slice(0, 5).map((student, index) => (
                   <div
                     key={student.id}
-                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-purple-50 transition-colors border border-gray-100"
                   >
                     <div className="text-2xl font-bold text-purple-600 w-8">
-                      #{idx + 1}
+                      #{index + 1}
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800">
@@ -314,39 +322,40 @@ export default function DashboardPage() {
 
             {/* Top Topics */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">
-                📚 Topik Populer
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span>📚</span> Topik Populer
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {topics.slice(0, 4).map((topic) => (
                   <div
                     key={topic.topik}
-                    className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg"
+                    className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-100 hover:border-purple-300 transition-all"
                   >
-                    <div className="text-2xl mb-2">
-                      {getTopikLabel(topic.topik)}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-lg font-bold text-gray-800">
+                        {getTopikLabel(topic.topik)}
+                      </div>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {topic.avg_score.toFixed(0)}%
+                      </div>
                     </div>
-                    <div className="space-y-1 text-sm">
+                    <div className="space-y-1.5 text-sm text-gray-600">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Percobaan:</span>
+                        <span>Percobaan:</span>
                         <span className="font-semibold">
                           {topic.total_attempts}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Rata-rata:</span>
-                        <span
-                          className={`font-semibold ${getScoreColor(
-                            topic.avg_score
-                          )}`}
-                        >
-                          {topic.avg_score}%
+                        <span>Lulus:</span>
+                        <span className="font-semibold text-green-600">
+                          {topic.students_passed} siswa
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Lulus:</span>
-                        <span className="font-semibold text-green-600">
-                          {topic.completion_rate.toFixed(1)}%
+                        <span>Tingkat Selesai:</span>
+                        <span className="font-semibold">
+                          {topic.completion_rate.toFixed(0)}%
                         </span>
                       </div>
                     </div>
@@ -440,7 +449,7 @@ export default function DashboardPage() {
             {topics.map((topic) => (
               <div
                 key={topic.topik}
-                className="bg-white rounded-xl shadow-md p-6"
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-gray-800">
@@ -506,33 +515,30 @@ export default function DashboardPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {Object.entries(emotions).map(([emosi, data]) => (
-                <div key={emosi} className="text-center">
-                  <div className="text-6xl mb-3">{getEmotionEmoji(emosi)}</div>
-                  <div className="text-3xl font-bold text-purple-600 mb-1">
-                    {data.percentage}%
-                  </div>
-                  <div className="text-sm text-gray-600 capitalize mb-2">
-                    {emosi.replace("_", " ")}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {data.count} kejadian
-                  </div>
-
-                  {/* Mini progress bar */}
-                  <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-purple-600 h-2 rounded-full transition-all"
-                      style={{ width: `${data.percentage}%` }}
-                    ></div>
+                <div
+                  key={emosi}
+                  className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all"
+                >
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">{getEmotionEmoji(emosi)}</div>
+                    <div className="text-lg font-semibold text-gray-800 capitalize mb-2">
+                      {emosi.replace("_", " ")}
+                    </div>
+                    <div className="text-3xl font-bold text-purple-600 mb-1">
+                      {data.count}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {data.percentage.toFixed(1)}%
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
             {Object.keys(emotions).length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <div className="text-6xl mb-4">📊</div>
-                <p>Belum ada data emosi</p>
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-5xl mb-4">😊</div>
+                <p className="text-lg font-medium text-gray-600">Belum ada data emosi</p>
               </div>
             )}
           </div>

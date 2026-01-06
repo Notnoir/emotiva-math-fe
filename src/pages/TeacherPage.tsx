@@ -123,20 +123,19 @@ function TeacherPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-12">
-      <div className="container-custom">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-purple-900 mb-2">
             👨‍🏫 Portal Guru
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-gray-600">
             Upload dan Kelola Materi Pembelajaran
           </p>
-          <div className="mt-4 inline-block bg-yellow-100 border-2 border-yellow-400 rounded-lg px-6 py-3">
-            <p className="text-sm text-yellow-800 font-semibold">
-              ⚠️ CRITICAL: Materi yang Anda upload adalah SUMBER PENGETAHUAN
-              UTAMA sistem AI
+          <div className="mt-4 inline-block bg-purple-100 border border-purple-300 rounded-xl px-5 py-2.5">
+            <p className="text-sm text-purple-800 font-medium">
+              💡 Materi yang Anda upload adalah sumber pengetahuan utama sistem AI
             </p>
           </div>
         </div>
@@ -144,18 +143,18 @@ function TeacherPage() {
         {/* Success/Error Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg ${
+            className={`mb-6 p-4 rounded-xl shadow-md ${
               message.includes("✅")
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-red-50 text-red-700 border border-red-200"
             }`}
           >
-            {message}
+            <p className="font-medium">{message}</p>
           </div>
         )}
 
         {/* Upload Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-12">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">
             {isEditing ? "📝 Edit Materi" : "➕ Upload Materi Baru"}
           </h2>
@@ -169,7 +168,7 @@ function TeacherPage() {
               <input
                 type="text"
                 required
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
                 placeholder="Contoh: Pengenalan Kubus - Dasar"
                 value={formData.judul}
                 onChange={(e) =>
@@ -186,7 +185,7 @@ function TeacherPage() {
                 </label>
                 <select
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
                   value={formData.topik}
                   onChange={(e) =>
                     setFormData({
@@ -211,7 +210,7 @@ function TeacherPage() {
                 </label>
                 <select
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
                   value={formData.level}
                   onChange={(e) =>
                     setFormData({
@@ -234,7 +233,7 @@ function TeacherPage() {
               </label>
               <input
                 type="text"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
                 placeholder="Nama Anda"
                 value={formData.created_by}
                 onChange={(e) =>
@@ -251,7 +250,7 @@ function TeacherPage() {
               <textarea
                 required
                 rows={15}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none font-mono text-sm"
                 placeholder={`Tuliskan materi lengkap di sini...
 
 Contoh:
@@ -283,7 +282,7 @@ CONTOH SOAL:
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
                   ? "⏳ Menyimpan..."
@@ -296,9 +295,9 @@ CONTOH SOAL:
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-all"
+                  className="px-8 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-all"
                 >
-                  ❌ Batal
+                  Batal
                 </button>
               )}
             </div>
@@ -306,16 +305,17 @@ CONTOH SOAL:
         </div>
 
         {/* Materials List */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">
             📚 Materi yang Sudah Diupload ({materials.length})
           </h2>
 
           {materials.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg">Belum ada materi yang diupload.</p>
+            <div className="text-center py-16 text-gray-400">
+              <div className="text-5xl mb-4">📚</div>
+              <p className="text-lg font-medium text-gray-600">Belum ada materi yang diupload</p>
               <p className="text-sm mt-2">
-                Silakan upload materi pertama Anda! 🚀
+                Silakan upload materi pertama Anda!
               </p>
             </div>
           ) : (
@@ -323,7 +323,7 @@ CONTOH SOAL:
               {materials.map((material) => (
                 <div
                   key={material.id}
-                  className="border-2 border-gray-200 rounded-lg p-6 hover:border-indigo-300 transition-all"
+                  className="border border-gray-200 rounded-xl p-5 hover:border-purple-300 hover:shadow-md transition-all"
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
@@ -345,28 +345,27 @@ CONTOH SOAL:
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(material)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all"
+                        className="px-4 py-2 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 transition-colors font-medium"
                       >
                         ✏️ Edit
                       </button>
                       <button
                         onClick={() => handleDelete(material.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all"
+                        className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors font-medium"
                       >
                         🗑️ Hapus
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4 mt-4">
+                  <div className="bg-gray-50 rounded-lg p-4 mt-4 border border-gray-100">
                     <p className="text-sm text-gray-700 whitespace-pre-line line-clamp-3">
                       {material.konten}
                     </p>
                   </div>
 
-                  <div className="mt-3 text-xs text-gray-500">
-                    Dibuat:{" "}
-                    {new Date(material.created_at).toLocaleString("id-ID")}
+                  <div className="mt-3 text-xs text-gray-400">
+                    Dibuat: {new Date(material.created_at).toLocaleString("id-ID")}
                   </div>
                 </div>
               ))}
