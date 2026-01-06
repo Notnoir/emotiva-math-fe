@@ -37,7 +37,10 @@ export interface TeacherMaterial {
   id: number;
   judul: string;
   topik: "kubus" | "balok" | "bola" | "tabung" | "kerucut" | "limas" | "prisma";
-  konten: string;
+  konten?: string;
+  file_path?: string;
+  file_name?: string;
+  file_type?: string;
   level: "pemula" | "menengah" | "mahir";
   created_by: string;
   created_at: string;

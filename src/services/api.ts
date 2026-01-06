@@ -147,6 +147,26 @@ const createMaterial = async (
   return response.data.data;
 };
 
+const uploadMaterial = async (formData: FormData): Promise<TeacherMaterial> => {
+  const response = await axios.post(`${API_BASE_URL}/materials`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+      Authorization: `Bearer ${authService.getToken()}`,
+    },
+  });
+  return response.data.data;
+};
+
+const downloadMaterial = async (id: number): Promise<Blob> => {
+  const response = await axios.get(`${API_BASE_URL}/materials/${id}/download`, {
+    responseType: "blob",
+    headers: {
+      Authorization: `Bearer ${authService.getToken()}`,
+    },
+  });
+  return response.data;
+};
+
 const updateMaterial = async (
   id: number,
   data: Partial<Omit<TeacherMaterial, "id" | "created_at" | "updated_at">>
@@ -176,6 +196,8 @@ export default {
   getMaterials,
   getMaterialById,
   createMaterial,
+  uploadMaterial,
+  downloadMaterial,
   updateMaterial,
   deleteMaterial,
   searchMaterials,
