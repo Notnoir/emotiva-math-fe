@@ -53,14 +53,31 @@ export default function StudentDashboardPage() {
       const historyRes = await axios.get(
         `${API_URL}/quiz/history/${userId}?limit=5`
       );
+      console.log("Quiz history response:", historyRes.data);
+
       if (historyRes.data.status === "success") {
-        setQuizHistory(historyRes.data.data.history || []);
+        // Map backend data to frontend interface
+        const attempts = historyRes.data.data.attempts || [];
+        console.log("Quiz attempts:", attempts);
+
+        const mappedHistory = attempts.map((attempt: any) => ({
+          id: attempt.id,
+          topik: attempt.topik,
+          score: attempt.benar,
+          total_questions: attempt.total_soal,
+          completed_at: attempt.completed_at,
+        }));
+        console.log("Mapped history:", mappedHistory);
+        setQuizHistory(mappedHistory);
       }
 
       // Load stats
       const statsRes = await axios.get(`${API_URL}/quiz/stats/${userId}`);
+      console.log("Quiz stats response:", statsRes.data);
+
       if (statsRes.data.status === "success") {
         const statsData = statsRes.data.data.stats;
+        console.log("Stats data:", statsData);
         setStats({
           total_quizzes: statsData?.total_quizzes || 0,
           avg_score: statsData?.avg_score || 0,
@@ -374,13 +391,13 @@ export default function StudentDashboardPage() {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {isPassed ? "✅ Lulus" : "❌ Belum Lulus"}
+                            {isPassed ? "Lulus" : "Belum Lulus"}
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-sm text-slate-600">
                           <div className="flex items-center gap-4">
                             <span>
-                              📊 Nilai:{" "}
+                              Nilai:{" "}
                               <strong className="text-[#6C5CE7]">
                                 {quiz.score}
                               </strong>{" "}

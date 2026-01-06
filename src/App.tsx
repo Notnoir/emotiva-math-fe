@@ -54,7 +54,9 @@ function Navigation() {
               <nav className="hidden md:flex items-center space-x-2">
                 <Link
                   to="/"
-                  className={`nav-link ${location.pathname === "/" ? "active" : ""}`}
+                  className={`nav-link ${
+                    location.pathname === "/" ? "active" : ""
+                  }`}
                 >
                   Home
                 </Link>
@@ -64,16 +66,24 @@ function Navigation() {
                   <>
                     <Link
                       to="/teacher"
-                      className={`nav-link ${location.pathname === "/teacher" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/teacher" ? "active" : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">school</span>
+                      <span className="material-symbols-outlined text-lg">
+                        school
+                      </span>
                       Materi
                     </Link>
                     <Link
                       to="/dashboard"
-                      className={`nav-link ${location.pathname === "/dashboard" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/dashboard" ? "active" : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">dashboard</span>
+                      <span className="material-symbols-outlined text-lg">
+                        dashboard
+                      </span>
                       Dashboard
                     </Link>
                   </>
@@ -84,30 +94,48 @@ function Navigation() {
                   <>
                     <Link
                       to="/student-dashboard"
-                      className={`nav-link ${location.pathname === "/student-dashboard" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/student-dashboard"
+                          ? "active"
+                          : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">dashboard</span>
+                      <span className="material-symbols-outlined text-lg">
+                        dashboard
+                      </span>
                       Dashboard
                     </Link>
                     <Link
                       to="/learn"
-                      className={`nav-link ${location.pathname === "/learn" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/learn" ? "active" : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">book</span>
+                      <span className="material-symbols-outlined text-lg">
+                        book
+                      </span>
                       Belajar
                     </Link>
                     <Link
                       to="/quiz"
-                      className={`nav-link ${location.pathname === "/quiz" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/quiz" ? "active" : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">sports_esports</span>
+                      <span className="material-symbols-outlined text-lg">
+                        sports_esports
+                      </span>
                       Quiz
                     </Link>
                     <Link
                       to="/profile"
-                      className={`nav-link ${location.pathname === "/profile" ? "active" : ""}`}
+                      className={`nav-link ${
+                        location.pathname === "/profile" ? "active" : ""
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-lg">person</span>
+                      <span className="material-symbols-outlined text-lg">
+                        person
+                      </span>
                       Profil
                     </Link>
                   </>
@@ -117,7 +145,9 @@ function Navigation() {
               {/* User Info & Logout */}
               <div className="flex items-center gap-4">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-900">{user.nama}</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {user.nama}
+                  </p>
                   <p className="text-xs text-slate-600">
                     {user.role === "teacher" ? "Guru" : "Siswa"}
                   </p>
@@ -154,7 +184,7 @@ function Navigation() {
 
 function AppContent() {
   const location = useLocation();
-  const hideNavAndFooter = ['/login', '/register'].includes(location.pathname);
+  const hideNavAndFooter = ["/login", "/register"].includes(location.pathname);
 
   return (
     <div className="min-h-screen">
@@ -222,7 +252,7 @@ function AppContent() {
 
       {/* Footer */}
       {!hideNavAndFooter && (
-        <footer className="bg-slate-800 text-white py-8 mt-12">
+        <footer className="bg-slate-800 text-white py-8">
           <div className="max-w-7xl mx-auto px-4 text-center">
             <p className="text-sm text-slate-400">
               © 2024 EMOTIVA-MATH - Tugas Besar Kecerdasan Buatan
