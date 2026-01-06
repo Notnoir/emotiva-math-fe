@@ -55,11 +55,6 @@ export default function LoginPage() {
     <div className="bg-custom-gradient font-display text-slate-800 min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       {/* Header Section */}
       <div className="text-center mb-8 animate-fade-in-down">
-        <div className="mx-auto h-20 w-20 bg-pink-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
-          <span className="material-icons text-5xl text-pink-400">
-            psychology
-          </span>
-        </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-[#8b5cf6] tracking-tight mb-2">
           EMOTIVA-MATH
         </h1>
@@ -164,9 +159,6 @@ export default function LoginPage() {
       {/* Demo Accounts Info */}
       <div className="mt-8 w-full max-w-[480px] bg-blue-50 rounded-xl p-5 border border-blue-100 shadow-sm">
         <div className="flex items-start">
-          <span className="material-icons text-yellow-500 text-lg mt-0.5 mr-2">
-            lightbulb
-          </span>
           <div className="flex-1">
             <h3 className="text-sm font-bold text-blue-900 mb-2">
               Demo Accounts (untuk testing):

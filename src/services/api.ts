@@ -192,6 +192,11 @@ const searchMaterials = async (
   return response.data.data;
 };
 
+const getAvailableTopics = async (): Promise<any[]> => {
+  const response = await api.get("/materials/topics");
+  return response.data.data;
+};
+
 export default {
   getMaterials,
   getMaterialById,
@@ -201,4 +206,5 @@ export default {
   updateMaterial,
   deleteMaterial,
   searchMaterials,
+  getAvailableTopics,
 };

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { emotionApi, learningApi, adaptiveApi } from "../services/api";
+import materialsApi from "../services/api";
 import ThreeDViewer from "../components/ThreeDViewer";
+import NetViewer from "../components/NetViewer";
 import axios from "axios";
 
 export default function LearnPage() {
@@ -13,6 +15,9 @@ export default function LearnPage() {
   const [loading, setLoading] = useState(false);
   const [visualizationData, setVisualizationData] = useState<any>(null);
   const [loadingViz, setLoadingViz] = useState(false);
+  const [topics, setTopics] = useState<any[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(true);
+  const [showNet, setShowNet] = useState(false);
 
   // Text-to-Speech states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,46 +41,29 @@ export default function LearnPage() {
       console.error("❌ Speech Synthesis not available in this browser");
     }
 
+    // Load available topics from backend
+    loadAvailableTopics();
+
     // Cleanup on unmount
     return () => {
       stopAudio();
     };
   }, []);
 
-  const topics = [
-    {
-      id: "kubus",
-      title: "Kubus",
-      icon: "check_box_outline_blank",
-      description: "Bangun ruang dengan 6 sisi berbentuk persegi",
-      difficulty: "Mudah",
-      color: "blue",
-    },
-    {
-      id: "bola",
-      title: "Bola",
-      icon: "circle",
-      description: "Bangun ruang berbentuk bulat sempurna",
-      difficulty: "Menengah",
-      color: "yellow",
-    },
-    {
-      id: "balok",
-      title: "Balok",
-      icon: "rectangle",
-      description: "Bangun ruang dengan 6 sisi berbentuk persegi panjang",
-      difficulty: "Mudah",
-      color: "orange",
-    },
-    {
-      id: "tabung",
-      title: "Tabung",
-      icon: "circle",
-      description: "Bangun ruang dengan alas lingkaran",
-      difficulty: "Menengah",
-      color: "pink",
-    },
-  ];
+  const loadAvailableTopics = async () => {
+    try {
+      setLoadingTopics(true);
+      const availableTopics = await materialsApi.getAvailableTopics();
+      setTopics(availableTopics);
+      console.log("✅ Loaded topics:", availableTopics);
+    } catch (error) {
+      console.error("❌ Error loading topics:", error);
+      // Fallback ke empty array jika error
+      setTopics([]);
+    } finally {
+      setLoadingTopics(false);
+    }
+  };
 
   const emotions = [
     { value: "percaya_diri", label: "Percaya Diri", emoji: "😄" },
@@ -312,7 +300,7 @@ export default function LearnPage() {
         return;
       }
 
-const utterance = new SpeechSynthesisUtterance(sentence);
+      const utterance = new SpeechSynthesisUtterance(sentence);
       utterance.voice = googleIndonesian;
       utterance.lang = "id-ID";
       utterance.rate = 0.9;
@@ -495,7 +483,8 @@ const utterance = new SpeechSynthesisUtterance(sentence);
               Konten disesuaikan dengan gaya belajar{" "}
               <span className="font-bold">{userProfile?.gaya_belajar}</span>,
               emosi <span className="font-bold">{currentEmotion}</span>, dan
-              level <span className="font-bold">{adaptiveContent.difficulty}</span>
+              level{" "}
+              <span className="font-bold">{adaptiveContent.difficulty}</span>
             </p>
           </div>
         </div>
@@ -560,64 +549,109 @@ const utterance = new SpeechSynthesisUtterance(sentence);
           </span>{" "}
           Pilih Topik Pembelajaran
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {topics.map((topic) => (
-            <div
-              key={topic.id}
-              onClick={() => handleTopicSelect(topic.id)}
-              className={`bg-white p-4 rounded-xl border hover:shadow-md transition-shadow cursor-pointer flex gap-3 items-start group ${
-                selectedTopic === topic.id
-                  ? "border-2 border-[#8b5cf6] shadow-md relative overflow-hidden"
-                  : "border-slate-100"
-              }`}
-            >
-              {selectedTopic === topic.id && (
-                <div className="absolute top-0 right-0 p-1">
-                  <span className="flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8b5cf6] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8b5cf6]"></span>
-                  </span>
-                </div>
-              )}
+
+        {/* Loading Topics State */}
+        {loadingTopics && (
+          <div className="bg-white rounded-xl p-8 text-center border border-slate-100">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full mb-3"></div>
+            <p className="text-sm text-slate-600">
+              Memuat topik pembelajaran...
+            </p>
+          </div>
+        )}
+
+        {/* Empty Topics State */}
+        {!loadingTopics && topics.length === 0 && (
+          <div className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl p-8 text-center border-2 border-dashed border-orange-200">
+            <div className="text-5xl mb-3">📚</div>
+            <h4 className="font-bold text-lg text-slate-800 mb-2">
+              Belum Ada Materi
+            </h4>
+            <p className="text-sm text-slate-600 max-w-md mx-auto">
+              Saat ini belum ada materi pembelajaran yang tersedia. Silakan
+              hubungi guru untuk mengupload materi terlebih dahulu.
+            </p>
+          </div>
+        )}
+
+        {/* Topics Grid */}
+        {!loadingTopics && topics.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {topics.map((topic) => (
               <div
-                className={`size-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  topic.color === "blue"
-                    ? "bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
-                    : topic.color === "yellow"
-                    ? "bg-yellow-100 text-yellow-600 group-hover:bg-yellow-600 group-hover:text-white"
-                    : topic.color === "orange"
-                    ? "bg-gradient-to-br from-orange-100 to-orange-200 text-orange-600"
-                    : "bg-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white"
+                key={topic.id}
+                onClick={() => handleTopicSelect(topic.id)}
+                className={`bg-white p-4 rounded-xl border hover:shadow-md transition-shadow cursor-pointer flex gap-3 items-start group ${
+                  selectedTopic === topic.id
+                    ? "border-2 border-[#8b5cf6] shadow-md relative overflow-hidden"
+                    : "border-slate-100"
                 }`}
               >
-                <span className="material-symbols-outlined">{topic.icon}</span>
-              </div>
-              <div>
-                <h4
-                  className={`font-bold text-sm ${
-                    selectedTopic === topic.id
-                      ? "text-[#8b5cf6]"
-                      : "text-slate-800"
+                {selectedTopic === topic.id && (
+                  <div className="absolute top-0 right-0 p-1">
+                    <span className="flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8b5cf6] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8b5cf6]"></span>
+                    </span>
+                  </div>
+                )}
+                <div
+                  className={`size-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                    topic.color === "blue"
+                      ? "bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
+                      : topic.color === "yellow"
+                      ? "bg-yellow-100 text-yellow-600 group-hover:bg-yellow-600 group-hover:text-white"
+                      : topic.color === "orange"
+                      ? "bg-gradient-to-br from-orange-100 to-orange-200 text-orange-600"
+                      : topic.color === "green"
+                      ? "bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white"
+                      : topic.color === "purple"
+                      ? "bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white"
+                      : topic.color === "red"
+                      ? "bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white"
+                      : "bg-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white"
                   }`}
                 >
-                  {topic.title}
-                </h4>
-                <p className="text-[10px] text-slate-500 mb-2">
-                  {topic.description}
-                </p>
-                <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                    topic.difficulty === "Mudah"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {topic.difficulty}
-                </span>
+                  <span className="material-symbols-outlined">
+                    {topic.icon}
+                  </span>
+                </div>
+                <div>
+                  <h4
+                    className={`font-bold text-sm ${
+                      selectedTopic === topic.id
+                        ? "text-[#8b5cf6]"
+                        : "text-slate-800"
+                    }`}
+                  >
+                    {topic.title}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 mb-2">
+                    {topic.description}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                        topic.difficulty === "Mudah"
+                          ? "bg-green-100 text-green-700"
+                          : topic.difficulty === "Menengah"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {topic.difficulty}
+                    </span>
+                    {topic.material_count && (
+                      <span className="text-[9px] text-slate-500">
+                        {topic.material_count} materi
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Loading State */}
@@ -692,7 +726,11 @@ const utterance = new SpeechSynthesisUtterance(sentence);
                   <span className="material-symbols-outlined text-sm">
                     volume_up
                   </span>{" "}
-                  {isPlaying && !isPaused ? "Pause" : isPaused ? "Resume" : "Listen"}
+                  {isPlaying && !isPaused
+                    ? "Pause"
+                    : isPaused
+                    ? "Resume"
+                    : "Listen"}
                 </button>
                 <button
                   onClick={testSpeech}
@@ -737,27 +775,85 @@ const utterance = new SpeechSynthesisUtterance(sentence);
           )}
 
           {!loadingViz && visualizationData && (
-            <div className="bg-white rounded-2xl shadow-lg border border-[#8b5cf6]/20 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] p-3 flex justify-between items-center text-white">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined">
-                    deployed_code
-                  </span>
-                  <h3 className="font-bold text-sm">
-                    Visualisasi 3D Interactive
-                  </h3>
-                </div>
-                <div className="text-[10px] bg-white/20 px-2 py-0.5 rounded flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs">
-                    code
-                  </span>{" "}
-                  {visualizationData.source === "llm"
-                    ? "AI-Generated"
-                    : "Rule-Based"}{" "}
-                  | Aman & Declarative
+            <div className="space-y-4">
+              {/* Toggle Buttons */}
+              <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <span className="text-sm font-semibold text-slate-700">
+                  Mode Visualisasi:
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowNet(false)}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                      !showNet
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      deployed_code
+                    </span>
+                    Model 3D
+                  </button>
+                  <button
+                    onClick={() => setShowNet(true)}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                      showNet
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      auto_awesome
+                    </span>
+                    Jaring-jaring
+                  </button>
                 </div>
               </div>
-              <ThreeDViewer data={visualizationData} />
+
+              {/* 3D Model View */}
+              {!showNet && (
+                <div className="bg-white rounded-2xl shadow-lg border border-[#8b5cf6]/20 overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] p-3 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined">
+                        deployed_code
+                      </span>
+                      <h3 className="font-bold text-sm">
+                        Visualisasi 3D Interactive
+                      </h3>
+                    </div>
+                    <div className="text-[10px] bg-white/20 px-2 py-0.5 rounded flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">
+                        code
+                      </span>{" "}
+                      {visualizationData.source === "llm"
+                        ? "AI-Generated"
+                        : "Rule-Based"}{" "}
+                      | Aman & Declarative
+                    </div>
+                  </div>
+                  <ThreeDViewer data={visualizationData} />
+                </div>
+              )}
+
+              {/* Net View */}
+              {showNet && selectedTopic && (
+                <NetViewer
+                  shape={
+                    selectedTopic as
+                      | "kubus"
+                      | "balok"
+                      | "tabung"
+                      | "kerucut"
+                      | "limas"
+                      | "prisma"
+                  }
+                  size={600}
+                  showLabels={true}
+                  interactive={true}
+                />
+              )}
             </div>
           )}
 
@@ -825,9 +921,7 @@ const utterance = new SpeechSynthesisUtterance(sentence);
           <div className="bg-violet-100 rounded-xl p-6 text-center md:text-left md:flex justify-between items-center border border-violet-200">
             <div>
               <h4 className="font-bold text-[#8b5cf6] flex items-center gap-2 mb-1 justify-center md:justify-start">
-                <span className="material-symbols-outlined">
-                  rocket_launch
-                </span>{" "}
+                <span className="material-symbols-outlined">rocket_launch</span>{" "}
                 Selanjutnya
               </h4>
               <p className="text-sm text-slate-600">
