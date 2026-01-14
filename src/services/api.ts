@@ -197,6 +197,19 @@ const getAvailableTopics = async (): Promise<any[]> => {
   return response.data.data;
 };
 
+const getStepByStepSolution = async (
+  topic: string,
+  problem: string,
+  level: string = "pemula"
+): Promise<any> => {
+  const response = await api.post("/materials/solution-steps", {
+    topic,
+    problem,
+    level,
+  });
+  return response.data.data;
+};
+
 export default {
   getMaterials,
   getMaterialById,
@@ -207,4 +220,5 @@ export default {
   deleteMaterial,
   searchMaterials,
   getAvailableTopics,
+  getStepByStepSolution,
 };

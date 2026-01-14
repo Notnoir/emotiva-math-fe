@@ -3,6 +3,8 @@ import { emotionApi, learningApi, adaptiveApi } from "../services/api";
 import materialsApi from "../services/api";
 import ThreeDViewer from "../components/ThreeDViewer";
 import NetViewer from "../components/NetViewer";
+import StepBySteViewer from "../components/StepBySteViewer";
+import ARViewer from "../components/ARViewer";
 import axios from "axios";
 
 export default function LearnPage() {
@@ -18,6 +20,22 @@ export default function LearnPage() {
   const [topics, setTopics] = useState<any[]>([]);
   const [loadingTopics, setLoadingTopics] = useState(true);
   const [showNet, setShowNet] = useState(false);
+
+  // Step-by-Step Solution states
+  const [showSolution, setShowSolution] = useState(false);
+  const [solutionData, setSolutionData] = useState<any>(null);
+  const [loadingSolution, setLoadingSolution] = useState(false);
+
+  // AR Mode states
+  const [showAR, setShowAR] = useState(false);
+  const [arShapeType, setArShapeType] = useState<
+    "kubus" | "balok" | "bola" | "tabung" | "kerucut" | "limas" | "prisma"
+  >("kubus");
+
+  // 3D Sync states
+  const [currentVisualHint, setCurrentVisualHint] = useState<string>("");
+  const [currentActiveLabel, setCurrentActiveLabel] = useState<string>("");
+  const [explodeEffect, setExplodeEffect] = useState(false);
 
   // Text-to-Speech states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -415,6 +433,99 @@ export default function LearnPage() {
     }
   };
 
+  const loadExampleSolution = async () => {
+    if (!selectedTopic) return;
+
+    setLoadingSolution(true);
+    setShowSolution(true);
+
+    try {
+      // Generate example problem based on topic
+      const exampleProblems: Record<string, string> = {
+        kubus:
+          "Sebuah kubus memiliki panjang sisi 5 cm. Hitunglah volume kubus tersebut!",
+        balok:
+          "Sebuah balok memiliki panjang 8 cm, lebar 5 cm, dan tinggi 4 cm. Hitunglah volume balok tersebut!",
+        bola: "Sebuah bola memiliki jari-jari 7 cm. Hitunglah volume bola tersebut! (gunakan π = 22/7)",
+        tabung:
+          "Sebuah tabung memiliki jari-jari alas 7 cm dan tinggi 10 cm. Hitunglah volume tabung tersebut!",
+        kerucut:
+          "Sebuah kerucut memiliki jari-jari alas 7 cm dan tinggi 12 cm. Hitunglah volume kerucut tersebut!",
+        limas:
+          "Sebuah limas segiempat memiliki panjang sisi alas 6 cm dan tinggi 8 cm. Hitunglah volume limas tersebut!",
+        prisma:
+          "Sebuah prisma segitiga memiliki alas segitiga dengan panjang alas 6 cm dan tinggi segitiga 4 cm, serta tinggi prisma 10 cm. Hitunglah volume prisma tersebut!",
+      };
+
+      const problem = exampleProblems[selectedTopic] || exampleProblems.kubus;
+
+      const solution = await materialsApi.getStepByStepSolution(
+        selectedTopic,
+        problem,
+        userProfile?.level || "pemula"
+      );
+
+      setSolutionData(solution);
+    } catch (error) {
+      console.error("Error loading solution:", error);
+      setSolutionData(null);
+    } finally {
+      setLoadingSolution(false);
+    }
+  };
+
+  const closeSolution = () => {
+    setShowSolution(false);
+    setSolutionData(null);
+    // Reset 3D sync states
+    setCurrentVisualHint("");
+    setCurrentActiveLabel("");
+    setExplodeEffect(false);
+  };
+
+  const handleStepChange = (step: any) => {
+    console.log("Step changed:", step);
+
+    // Update visual hint for 3D model
+    if (step.visual_hint) {
+      setCurrentVisualHint(step.visual_hint);
+
+      // Handle specific visual hints
+      switch (step.visual_hint) {
+        case "highlight_sisi":
+        case "highlight":
+          setCurrentActiveLabel(`Langkah ${step.step_number}: ${step.title}`);
+          setExplodeEffect(false);
+          break;
+        case "show_formula":
+          if (step.formula) {
+            setCurrentActiveLabel(step.formula);
+          }
+          setExplodeEffect(false);
+          break;
+        case "calculate":
+          setExplodeEffect(true);
+          if (step.calculation) {
+            setCurrentActiveLabel(step.calculation);
+          }
+          break;
+        case "show_result":
+          setExplodeEffect(false);
+          if (solutionData?.final_answer) {
+            setCurrentActiveLabel(solutionData.final_answer);
+          }
+          break;
+        default:
+          setCurrentActiveLabel(`Step ${step.step_number}`);
+          setExplodeEffect(false);
+      }
+    } else {
+      setCurrentVisualHint("");
+      setCurrentActiveLabel("");
+      setExplodeEffect(false);
+    }
+  };
+
   const getEmotionMessage = () => {
     switch (currentEmotion) {
       case "percaya_diri":
@@ -808,6 +919,18 @@ export default function LearnPage() {
                     </span>
                     Jaring-jaring
                   </button>
+                  <button
+                    onClick={() => {
+                      setArShapeType(selectedTopic as any);
+                      setShowAR(true);
+                    }}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg"
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      view_in_ar
+                    </span>
+                    Mode AR
+                  </button>
                 </div>
               </div>
 
@@ -854,6 +977,151 @@ export default function LearnPage() {
                   interactive={true}
                 />
               )}
+            </div>
+          )}
+
+          {/* Step-by-Step Solution Example */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border-2 border-amber-200">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">💡</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-900 text-lg mb-1">
+                  Contoh Soal & Solusi Step-by-Step
+                </h3>
+                <p className="text-amber-700 text-sm">
+                  Lihat cara menyelesaikan soal dengan langkah-langkah yang
+                  mudah dipahami
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={loadExampleSolution}
+              disabled={loadingSolution}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loadingSolution ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Memuat solusi...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined">play_arrow</span>
+                  <span>Lihat Solusi Step-by-Step</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* AR Viewer Modal */}
+          {showAR && (
+            <ARViewer
+              shapeType={arShapeType}
+              color="#10b981"
+              scale={[2, 2, 2]}
+              onClose={() => setShowAR(false)}
+            />
+          )}
+
+          {/* Step-by-Step Solution Viewer Modal with 3D Sync */}
+          {showSolution && solutionData && visualizationData && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="w-full max-w-7xl max-h-[95vh] overflow-hidden">
+                <div className="relative bg-slate-900 rounded-2xl shadow-2xl">
+                  {/* Close Button */}
+                  <button
+                    onClick={closeSolution}
+                    className="absolute top-4 right-4 z-20 w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+                    aria-label="Close solution viewer"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl">
+                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                      <span className="text-3xl">🎯</span>
+                      Solusi Interaktif dengan Visualisasi 3D
+                    </h2>
+                    <p className="text-indigo-100 text-sm mt-2">
+                      Ikuti langkah-langkah di kanan, lihat visualisasi 3D di
+                      kiri berubah secara otomatis
+                    </p>
+                  </div>
+
+                  {/* Side-by-Side Content */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 max-h-[calc(95vh-180px)] overflow-y-auto">
+                    {/* Left: 3D Visualization */}
+                    <div className="bg-slate-800 rounded-xl p-4 h-full min-h-[500px] lg:sticky lg:top-0">
+                      <div className="mb-3">
+                        <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                          <span className="material-symbols-outlined text-purple-400">
+                            deployed_code
+                          </span>
+                          Visualisasi 3D Interaktif
+                        </h3>
+                        <p className="text-slate-400 text-sm mt-1">
+                          Model berubah sesuai langkah yang aktif
+                        </p>
+                      </div>
+                      <ThreeDViewer
+                        data={visualizationData}
+                        visualHint={currentVisualHint}
+                        activeLabel={currentActiveLabel}
+                        explodeEffect={explodeEffect}
+                      />
+
+                      {/* Visual Hint Indicator */}
+                      {currentVisualHint && (
+                        <div className="mt-4 bg-purple-900/50 border border-purple-500 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-purple-300 text-sm">
+                            <span className="material-symbols-outlined text-lg">
+                              visibility
+                            </span>
+                            <span className="font-medium">
+                              Mode: {currentVisualHint.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Step-by-Step Solution */}
+                    <div className="h-full overflow-y-auto">
+                      <StepBySteViewer
+                        data={solutionData}
+                        onStepChange={handleStepChange}
+                        onComplete={() => {
+                          console.log("Solution completed!");
+                          setCurrentVisualHint("");
+                          setCurrentActiveLabel("✅ Selesai!");
+                          setExplodeEffect(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer Info */}
+                  <div className="bg-slate-800 border-t border-slate-700 p-4 rounded-b-2xl">
+                    <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 bg-amber-500 rounded-full"></span>
+                        <span>Highlight = Bagian yang diperhatikan</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
+                        <span>Explode = Visualisasi perhitungan</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        <span>Label = Informasi dinamis</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

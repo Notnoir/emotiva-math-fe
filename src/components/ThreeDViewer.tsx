@@ -15,6 +15,7 @@ import {
   PerspectiveCamera,
   Grid,
   ContactShadows,
+  Edges,
 } from "@react-three/drei";
 import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
@@ -55,11 +56,35 @@ interface VisualizationData {
 
 interface ThreeDViewerProps {
   data: VisualizationData;
+  visualHint?: string;
+  activeLabel?: string;
+  explodeEffect?: boolean;
 }
 
-function Shape({ obj, rotate }: { obj: VisualizationObject; rotate: boolean }) {
+function Shape({
+  obj,
+  rotate,
+  visualHint,
+  explodeOffset,
+}: {
+  obj: VisualizationObject;
+  rotate: boolean;
+  visualHint?: string;
+  explodeOffset: number;
+}) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+
+  // Determine if this shape should be highlighted
+  const isHighlighted =
+    visualHint === "highlight_sisi" || visualHint === "highlight";
+
+  // Calculate explode position offset
+  const explodedPosition: [number, number, number] = [
+    obj.position[0] * (1 + explodeOffset),
+    obj.position[1] * (1 + explodeOffset),
+    obj.position[2] * (1 + explodeOffset),
+  ];
 
   // Auto-rotation disabled - user can rotate manually with mouse
   // useEffect(() => {
@@ -97,7 +122,7 @@ function Shape({ obj, rotate }: { obj: VisualizationObject; rotate: boolean }) {
     <group>
       <mesh
         ref={meshRef}
-        position={obj.position}
+        position={explodeOffset > 0 ? explodedPosition : obj.position}
         rotation={
           obj.rotation.map((r) => (r * Math.PI) / 180) as [
             number,
@@ -112,40 +137,31 @@ function Shape({ obj, rotate }: { obj: VisualizationObject; rotate: boolean }) {
         scale={hovered ? 1.05 : 1}
       >
         {getGeometry()}
-        <meshPhysicalMaterial
-          color={obj.color}
-          wireframe={obj.wireframe || false}
-          transparent={true}
-          opacity={obj.opacity || 1}
-          metalness={0.3}
-          roughness={0.4}
-          clearcoat={1}
-          clearcoatRoughness={0.3}
-          reflectivity={0.5}
-        />
-      </mesh>
-
-      {/* Edge outline for better definition */}
-      {!obj.wireframe && (
-        <mesh
-          position={obj.position}
-          rotation={
-            obj.rotation.map((r) => (r * Math.PI) / 180) as [
-              number,
-              number,
-              number
-            ]
-          }
-        >
-          {getGeometry()}
+        {/* Tampilkan solid hanya saat highlight, biasanya wireframe */}
+        {isHighlighted ? (
+          <meshPhysicalMaterial
+            color="#fbbf24"
+            transparent={true}
+            opacity={0.7}
+            metalness={0.3}
+            roughness={0.4}
+            emissive="#f59e0b"
+            emissiveIntensity={0.5}
+          />
+        ) : (
           <meshBasicMaterial
-            color="#000000"
-            wireframe={true}
+            color={obj.color}
             transparent={true}
             opacity={0.1}
           />
-        </mesh>
-      )}
+        )}
+        {/* Edges (rusuk) - selalu tampil */}
+        <Edges
+          scale={1.001}
+          color={isHighlighted ? "#f59e0b" : obj.color}
+          linewidth={2}
+        />
+      </mesh>
 
       {obj.label && (
         <Text
@@ -166,8 +182,175 @@ function Shape({ obj, rotate }: { obj: VisualizationObject; rotate: boolean }) {
   );
 }
 
-function Scene({ data }: { data: VisualizationData }) {
+// Helper function to parse formula and extract dimension labels
+function parseFormulaLabels(
+  formula: string,
+  shapeType: string,
+  objectScale: [number, number, number],
+  objectPosition: [number, number, number]
+): Array<{ text: string; position: [number, number, number]; color: string }> {
+  const labels: Array<{
+    text: string;
+    position: [number, number, number];
+    color: string;
+  }> = [];
+
+  // Common dimension mappings
+  const dimensionMap: Record<
+    string,
+    {
+      pattern: RegExp;
+      getPosition: (
+        scale: [number, number, number],
+        pos: [number, number, number]
+      ) => [number, number, number];
+      label: string;
+    }
+  > = {
+    // Tinggi (height) - vertical
+    t: {
+      pattern: /\bt\b/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2 + 1.5,
+        pos[1] + scale[1] / 2,
+        pos[2],
+      ],
+      label: "t",
+    },
+    tinggi: {
+      pattern: /tinggi/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2 + 1.5,
+        pos[1] + scale[1] / 2,
+        pos[2],
+      ],
+      label: "tinggi",
+    },
+
+    // Lebar (width)
+    l: {
+      pattern: /\bl\b/gi,
+      getPosition: (scale, pos) => [
+        pos[0],
+        pos[1] - scale[1] / 2 - 1.5,
+        pos[2],
+      ],
+      label: "l",
+    },
+    lebar: {
+      pattern: /lebar/gi,
+      getPosition: (scale, pos) => [
+        pos[0],
+        pos[1] - scale[1] / 2 - 1.5,
+        pos[2],
+      ],
+      label: "lebar",
+    },
+
+    // Panjang (length)
+    p: {
+      pattern: /\bp\b/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2,
+        pos[1] - scale[1] / 2 - 1.5,
+        pos[2] + scale[2] / 2 + 1,
+      ],
+      label: "p",
+    },
+    panjang: {
+      pattern: /panjang/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2,
+        pos[1] - scale[1] / 2 - 1.5,
+        pos[2] + scale[2] / 2 + 1,
+      ],
+      label: "panjang",
+    },
+
+    // Sisi (side - for cube)
+    s: {
+      pattern: /\bs\b/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2 + 1.2,
+        pos[1] - scale[1] / 2 - 1.2,
+        pos[2] + scale[2] / 2,
+      ],
+      label: "s",
+    },
+    sisi: {
+      pattern: /sisi/gi,
+      getPosition: (scale, pos) => [
+        pos[0] + scale[0] / 2 + 1.2,
+        pos[1] - scale[1] / 2 - 1.2,
+        pos[2] + scale[2] / 2,
+      ],
+      label: "sisi",
+    },
+
+    // Jari-jari (radius)
+    r: {
+      pattern: /\br\b/gi,
+      getPosition: (scale, pos) => [pos[0] + scale[0] + 1.5, pos[1], pos[2]],
+      label: "r",
+    },
+    "jari-jari": {
+      pattern: /jari-jari/gi,
+      getPosition: (scale, pos) => [pos[0] + scale[0] + 1.5, pos[1], pos[2]],
+      label: "jari-jari",
+    },
+
+    // Diameter
+    d: {
+      pattern: /\bd\b/gi,
+      getPosition: (scale, pos) => [pos[0] + scale[0] + 2, pos[1], pos[2]],
+      label: "d",
+    },
+    diameter: {
+      pattern: /diameter/gi,
+      getPosition: (scale, pos) => [pos[0] + scale[0] + 2, pos[1], pos[2]],
+      label: "diameter",
+    },
+  };
+
+  // Check which dimensions are in the formula
+  Object.entries(dimensionMap).forEach(([key, config]) => {
+    if (config.pattern.test(formula)) {
+      const position = config.getPosition(objectScale, objectPosition);
+      labels.push({
+        text: config.label,
+        position,
+        color: "#fbbf24", // amber color
+      });
+    }
+  });
+
+  return labels;
+}
+
+function Scene({
+  data,
+  visualHint,
+  activeLabel,
+  explodeEffect,
+}: {
+  data: VisualizationData;
+  visualHint?: string;
+  activeLabel?: string;
+  explodeEffect?: boolean;
+}) {
   const rotate = data.animation?.rotate || false;
+  const explodeOffset = explodeEffect ? 0.3 : 0;
+
+  // Parse formula labels when show_formula hint is active
+  const formulaLabels =
+    visualHint === "show_formula" && activeLabel
+      ? parseFormulaLabels(
+          activeLabel,
+          data.objects[0]?.type || "box",
+          data.objects[0]?.scale || [2, 2, 2],
+          data.objects[0]?.position || [0, 0, 0]
+        )
+      : [];
 
   return (
     <>
@@ -212,7 +395,13 @@ function Scene({ data }: { data: VisualizationData }) {
 
       {/* Objects */}
       {data.objects.map((obj) => (
-        <Shape key={obj.id} obj={obj} rotate={rotate} />
+        <Shape
+          key={obj.id}
+          obj={obj}
+          rotate={rotate}
+          visualHint={visualHint}
+          explodeOffset={explodeOffset}
+        />
       ))}
 
       {/* Annotations */}
@@ -228,6 +417,74 @@ function Scene({ data }: { data: VisualizationData }) {
           {annotation.text}
         </Text>
       ))}
+
+      {/* Smart Formula Labels - positioned based on dimensions */}
+      {formulaLabels.length > 0 ? (
+        <>
+          {/* Main formula at top */}
+          <Text
+            position={[0, 4, 0]}
+            color="#fbbf24"
+            fontSize={0.8}
+            maxWidth={10}
+            lineHeight={1}
+            letterSpacing={0.02}
+            textAlign="center"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.05}
+            outlineColor="#000000"
+          >
+            {activeLabel}
+          </Text>
+
+          {/* Individual dimension labels at their positions */}
+          {formulaLabels.map((label, idx) => (
+            <group key={`formula-label-${idx}`}>
+              {/* Label text */}
+              <Text
+                position={label.position}
+                color={label.color}
+                fontSize={0.6}
+                fontWeight="bold"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.05}
+                outlineColor="#000000"
+              >
+                {label.text}
+              </Text>
+
+              {/* Subtle glow effect */}
+              <pointLight
+                position={label.position}
+                color="#fbbf24"
+                intensity={0.3}
+                distance={1.5}
+              />
+            </group>
+          ))}
+        </>
+      ) : (
+        /* Fallback: Dynamic active label from step-by-step */
+        activeLabel && (
+          <Text
+            position={[0, 4, 0]}
+            color="#fbbf24"
+            fontSize={0.8}
+            maxWidth={10}
+            lineHeight={1}
+            letterSpacing={0.02}
+            textAlign="center"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.05}
+            outlineColor="#000000"
+          >
+            {activeLabel}
+          </Text>
+        )
+      )}
 
       {/* Modern Grid - Disabled for cleaner view */}
       {/* <Grid
@@ -273,7 +530,12 @@ function Scene({ data }: { data: VisualizationData }) {
   );
 }
 
-export default function ThreeDViewer({ data }: ThreeDViewerProps) {
+export default function ThreeDViewer({
+  data,
+  visualHint,
+  activeLabel,
+  explodeEffect,
+}: ThreeDViewerProps) {
   return (
     <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-2xl border border-slate-700">
       <div className="w-full h-[600px] relative">
@@ -286,7 +548,12 @@ export default function ThreeDViewer({ data }: ThreeDViewerProps) {
             toneMappingExposure: 1.2,
           }}
         >
-          <Scene data={data} />
+          <Scene
+            data={data}
+            visualHint={visualHint}
+            activeLabel={activeLabel}
+            explodeEffect={explodeEffect}
+          />
         </Canvas>
 
         {/* Control hints overlay */}
